@@ -35,8 +35,8 @@
   color: var(--text-0);
   text-shadow: 0 0 24px rgba(54, 241, 194, 0.25);
 }
-.brand--xl .brand__mark { width: 56px; height: 56px; }
-.brand--xl .brand__name { font-size: 52px; }
+.brand--xl .brand__mark { width: clamp(36px, 7vw, 56px); height: clamp(36px, 7vw, 56px); }
+.brand--xl .brand__name { font-size: clamp(28px, 7.5vw, 52px); }
 
 /* --- Экран загрузки --- */
 .screen {

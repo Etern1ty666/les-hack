@@ -1,0 +1,64 @@
+schema: spec-driven
+
+context: |
+  Language: ru
+  All artifacts must be written in ru.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  Проект: «ПОДРОСТ» (рабочее название) — веб-прототип для хакатона Рослесхоза,
+  Трек №4, задача 3 «Поддержка принятия решений о необходимости проведения
+  мероприятий по лесовосстановлению». По данным о подросте (таксационное описание
+  лесосеки + заключительный осмотр) система решает, нужно ли лесовосстановление,
+  каким способом (естественное / комбинированное / искусственное) и с какими
+  параметрами. Подробности: docs/task.md, docs/domain-glossary.md.
+
+  Продуктовая идея: «командный центр» в стиле стратегии с видом сверху —
+  3D-глобус, вся Россия покрыта лесосеками, зоны подсвечены по решению,
+  HUD как в RTS. Визуал: docs/visual-direction.md. Сценарий демо: docs/demo-script.md.
+
+  Стек (фиксирован, не менять без отдельного change):
+  - Vite + React 19 + TypeScript (strict), только фронтенд, без бэкенда.
+  - Карта: maplibre-gl (globe) + deck.gl 9.4 (MapboxOverlay, interleaved) + h3-js.
+  - Состояние: zustand. Анимации UI: motion. Тесты: vitest.
+  - Шрифты: @fontsource (Unbounded, Exo 2, JetBrains Mono), всё с кириллицей.
+  - Деплой: GitHub Pages через GitHub Actions.
+
+  Контракты (единый источник правды, менять только через change):
+  - src/domain/types.ts — доменные типы (CuttingSite, DecisionResult, NormsConfig…)
+  - src/state/store.ts — глобальный стор (zustand)
+  - src/engine/index.ts — evaluateSite / evaluateAll / DEFAULT_NORMS
+  - src/data/index.ts — loadDataset()
+  Полный текст контрактов — в openspec/changes/setup-app-foundation/design.md.
+
+  Владение папками (чтобы параллельные потоки не конфликтовали):
+  - foundation: конфиги, package.json, src/domain, src/state, src/ui, src/styles, src/App.tsx
+  - engine: src/engine/**
+  - dataset: scripts/**, public/data/**, src/data/**
+  - map: src/map/** (кроме src/map/site3d/**)
+  - hud: src/hud/**
+  - analytics: src/workspace/**
+  - site3d: src/map/site3d/**
+  Чужие папки не трогать; если нужно изменить контракт — отдельный маленький PR.
+
+  Конвенции:
+  - Весь текст интерфейса — на русском. Числа: пробел как разделитель тысяч, «га», «шт/га», «₽».
+  - Код и идентификаторы — на английском. Комментарии — коротко, по-русски или по-английски.
+  - Никаких API-ключей и секретов: только бесплатные источники тайлов без ключа.
+  - Данные синтетические, и в UI это всегда видно (бейдж «Демо-данные»).
+  - Нормативы в коде — демонстрационные; каждое число нормы хранится в конфиге
+    с полем source и пометкой «сверить с НПА».
+
+rules:
+  tasks:
+    - Каждая задача указывает, как проверить выполнение (команда, тест или видимое поведение).
+    - Задачи не выходят за пределы папок, которыми владеет поток (см. context).
+  design:
+    - Если решение затрагивает контракты из setup-app-foundation, явно перечислить изменения.
+
+operations:
+  apply:
+    guidance:
+      - Перед началом прочитать AGENTS.md в корне репозитория.
+      - Работать в отдельной ветке feat/<change-name>, коммитить после каждой группы задач.
+      - После каждой группы задач запускать npm run typecheck && npm test.
+      - Визуальные задачи проверять в браузере (npm run dev) и прикладывать скриншот в PR.

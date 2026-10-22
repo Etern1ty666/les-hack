@@ -45,5 +45,5 @@
 ## Workflow follow-up
 
 - После мержа в `main` написать в чат команды: «Волна 0 готова, стартуем engine / dataset / map / hud».
-- В настройках репозитория включить Pages → Source: GitHub Actions.
+- GitHub Pages уже включён (Source: GitHub Actions). После мержа проверить, что сайт открывается: https://etern1ty666.github.io/les-hack/
 - Архивировать change командой `/opsx:archive setup-app-foundation`, когда все потоки волны 1 смержены.

@@ -1,0 +1,63 @@
+/* Плейсхолдер карты (заменит add-strategic-map). */
+.map-placeholder {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--space);
+}
+.nebula {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 40% 30% at 70% 30%, rgba(54, 241, 194, 0.06), transparent 70%),
+    radial-gradient(ellipse 35% 25% at 20% 75%, rgba(139, 156, 255, 0.05), transparent 70%);
+}
+.starfield {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.planet {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(62vh, 52vw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  transition: transform 2.4s var(--ease-out), filter 2.4s;
+}
+.planet--ready {
+  transform: translate(-50%, -38%) scale(1.9);
+  filter: brightness(0.75);
+}
+.planet__body {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(80, 140, 110, 0.55), transparent 45%),
+    radial-gradient(circle at 60% 45%, #0f2a22 0%, #081712 45%, #03080a 75%);
+  box-shadow: inset -28px -18px 60px rgba(0, 0, 0, 0.85);
+}
+.planet__body::after {
+  /* сетка широт как намёк на будущие гексы */
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-linear-gradient(0deg, transparent 0 22px, rgba(54, 241, 194, 0.05) 22px 23px);
+  mask-image: radial-gradient(circle at 45% 40%, #000 30%, transparent 70%);
+}
+.planet__atmosphere {
+  position: absolute;
+  inset: -4%;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 66%, rgba(54, 241, 194, 0.28) 70%, rgba(58, 166, 255, 0.08) 76%, transparent 80%);
+  filter: blur(2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .planet {
+    transition: none;
+  }
+}

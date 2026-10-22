@@ -1,7 +1,12 @@
 node_modules/
 dist/
+dist-ssr/
 scripts/.cache/
 .DS_Store
 *.local
 .env*
 coverage/
+*.log
+.vscode/*
+!.vscode/extensions.json
+.idea

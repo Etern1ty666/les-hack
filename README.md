@@ -9,9 +9,29 @@
 
 Интерфейс — 3D-глобус в стиле стратегии с видом сверху. Вся Россия покрыта лесосеками, зоны подсвечены по решению, HUD как в RTS.
 
-> Статус: **спецификации готовы, кода пока нет.** Реализация идёт волнами по OpenSpec (см. ниже).
+> Статус: **волна 0 готова** (каркас, контракты, стор, UI-примитивы, фикстура на 300 лесосек, деплой). Дальше — волна 1, см. ниже.
 >
-> Демо (после волны 0 деплоится автоматически из `main`): https://etern1ty666.github.io/les-hack/
+> Демо (деплоится автоматически из `main`): https://etern1ty666.github.io/les-hack/ · UI-витрина: https://etern1ty666.github.io/les-hack/?ui=1
+
+## Запуск
+
+```bash
+npm ci
+```
+
+```bash
+npm run dev
+```
+
+| Команда | Что делает |
+|---|---|
+| `npm run dev` | дев-сервер Vite (http://localhost:5173) |
+| `npm run typecheck` | проверка типов (`tsc -b`) |
+| `npm test` | тесты vitest (`npm test -- --run` — один прогон) |
+| `npm run lint` | oxlint (линтер из шаблона create-vite) |
+| `npm run build` | прод-сборка в `dist/` |
+
+Витрина UI-примитивов — `?ui=1` (например, http://localhost:5173/?ui=1).
 
 ## Документы
 
@@ -96,6 +116,10 @@ openspec validate --all --strict
 ## Стек
 
 Vite + React 19 + TypeScript, MapLibre GL (globe) + deck.gl 9.4 + H3, zustand, motion, vitest. Деплой — GitHub Pages. Бэкенда нет, ключей и секретов нет.
+
+Фактические версии (волна 0, октябрь 2026): node 24 (CI — 22), vite 8.3, react 19.3, typescript 6.0 (из шаблона create-vite), maplibre-gl 6.15, react-map-gl 8.1, deck.gl 9.4.0, luma.gl 9.4.2, h3-js 4.5, zustand 5.0, motion 14.6, vitest 5.0, oxlint 1.88.
+
+Структура `src/`: `domain` (контракты, справочники, форматирование), `state` (стор, селекторы, загрузка), `engine` (движок; сейчас заглушка), `data` (загрузка данных; сейчас фикстура), `fixtures`, `shell` (оболочка), `ui` (примитивы), `styles` (токены), `map` / `hud` / `workspace` (плейсхолдеры потоков волн 1–2).
 
 ## Источники данных
 

@@ -1,0 +1,51 @@
+/* Дизайн-токены (docs/visual-direction.md, setup-app-foundation design D14). Цвета решений дублируются в domain/constants.ts. */
+:root {
+  /* фон и панели */
+  --space: #03060a;
+  --bg-0: #060b0e;
+  --bg-1: #0a1114;
+  --panel: rgba(8, 16, 19, 0.72);
+  --panel-solid: #0b1518;
+  --panel-border: rgba(120, 255, 214, 0.14);
+  --panel-border-strong: rgba(120, 255, 214, 0.28);
+
+  /* акцент и текст */
+  --accent: #36f1c2;
+  --accent-dim: rgba(54, 241, 194, 0.18);
+  --accent-faint: rgba(54, 241, 194, 0.08);
+  --text-0: #e6f4f0;
+  --text-1: #9db5ae;
+  --text-2: #5f7570;
+
+  /* решения */
+  --natural: #34d399;
+  --combined: #fbbf24;
+  --artificial: #fb4d61;
+  --nodata: #8b9cff;
+  --danger: #ff3b5c;
+
+  /* шрифты */
+  --font-display: 'Unbounded', 'Exo 2', system-ui, sans-serif;
+  --font-ui: 'Exo 2', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* раскладка */
+  --topbar-h: 64px;
+  --left-w: 296px;
+  --right-w: 400px;
+  --bottom-h: 168px;
+  --minimap-w: 260px;
+  --gap: 12px;
+  --radius: 4px;
+
+  /* движение */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-panel: 220ms;
+  --glow: 0 0 0 1px var(--accent-dim), 0 0 24px var(--accent-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-panel: 80ms;
+  }
+}

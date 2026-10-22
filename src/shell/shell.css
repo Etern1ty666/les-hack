@@ -1,0 +1,186 @@
+/* Оболочка: слои экрана, экран загрузки, интро, ошибка, бейдж, виньетка. */
+
+.app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--space);
+}
+.layer {
+  position: absolute;
+  inset: 0;
+}
+.layer--map { z-index: 0; }
+.layer--hud { z-index: 10; pointer-events: none; }
+.layer--workspace { z-index: 20; pointer-events: none; }
+.layer--overlays { z-index: 30; pointer-events: none; }
+.layer--screens { z-index: 40; }
+
+/* --- Логотип --- */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.brand__mark {
+  width: 34px;
+  height: 34px;
+  filter: drop-shadow(0 0 10px var(--accent-dim));
+}
+.brand__name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: 0.08em;
+  color: var(--text-0);
+  text-shadow: 0 0 24px rgba(54, 241, 194, 0.25);
+}
+.brand--xl .brand__mark { width: 56px; height: 56px; }
+.brand--xl .brand__name { font-size: 52px; }
+
+/* --- Экран загрузки --- */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.screen--opaque {
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 45%, rgba(54, 241, 194, 0.07), transparent 70%),
+    var(--space);
+}
+.loading {
+  width: min(520px, 86vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.loading__tagline {
+  color: var(--text-1);
+  letter-spacing: 0.04em;
+}
+.loading__bar {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  margin-top: 18px;
+  background: rgba(157, 181, 174, 0.14);
+  overflow: hidden;
+}
+.loading__fill {
+  height: 100%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  transition: width 200ms var(--ease-out);
+}
+.loading__step {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  color: var(--text-1);
+}
+.loading__count {
+  font-family: var(--font-mono);
+  color: var(--text-0);
+}
+
+/* --- Интро --- */
+.intro {
+  width: min(620px, 90vw);
+  padding: 36px 40px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.intro__event {
+  color: var(--accent);
+}
+.intro__tagline {
+  font-size: 16px;
+  color: var(--text-1);
+  margin: 0;
+}
+.intro__stats {
+  display: flex;
+  gap: 28px;
+  margin: 10px 0 6px;
+}
+.intro__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.intro__hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+/* --- Ошибка --- */
+.error {
+  width: min(520px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.error__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--danger);
+  margin: 0;
+}
+.error__message {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-1);
+  padding: 10px 12px;
+  border-left: 2px solid var(--danger);
+  background: rgba(255, 59, 92, 0.08);
+  word-break: break-word;
+}
+
+/* --- Бейдж демо-данных --- */
+.demo-badge {
+  position: absolute;
+  right: var(--gap);
+  bottom: 6px;
+  pointer-events: auto;
+}
+.demo-badge__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  border-radius: 11px;
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--combined);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: help;
+}
+
+/* --- Виньетка и шум --- */
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.35) 100%);
+}
+.vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}

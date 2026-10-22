@@ -37,6 +37,7 @@ npm run dev
 
 | Файл | О чём |
 |---|---|
+| [docs/team-brief.md](docs/team-brief.md) | **Начните здесь:** бриф для команды — кто что берёт, как стартовать, грабли |
 | [docs/task.md](docs/task.md) | Постановка задачи и как мы её понимаем |
 | [docs/domain-glossary.md](docs/domain-glossary.md) | Глоссарий: подрост, ТЛУ, встречаемость, нормативы… |
 | [docs/visual-direction.md](docs/visual-direction.md) | Визуальный стиль: палитра, шрифты, раскладка, анимации |

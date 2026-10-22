@@ -55,8 +55,8 @@ export default function Hud() {
         </div>
       </Panel>
       <Panel dense style={{ marginTop: 'var(--gap)', width: 'fit-content', color: 'var(--text-1)' }}>
-        Волна 0 готова: данные, заглушка движка и стор работают. Карта появится в <span className="mono">add-strategic-map</span>, интерфейс — в{' '}
-        <span className="mono">add-command-hud</span>.
+        Глобус и контуры субъектов готовы. Гексы и лесосеки на карте — <span className="mono">add-strategic-map</span> (группа 2), интерфейс —{' '}
+        <span className="mono">add-command-hud</span>. Предпросмотр гексов: <span className="mono">?spike=1</span>.
       </Panel>
     </motion.div>
   )

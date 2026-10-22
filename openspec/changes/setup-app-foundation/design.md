@@ -47,7 +47,7 @@
 
 ### D2. Зависимости (мажорные версии на октябрь 2026)
 
-`react@19`, `react-dom@19`, `maplibre-gl@6`, `react-map-gl@8` (импорт из `react-map-gl/maplibre`), `@deck.gl/core|layers|geo-layers|mesh-layers|mapbox|extensions@9.4`, `@luma.gl/engine@9.4`, `h3-js@4`, `zustand@5`, `motion@14`, `lucide-react`, `papaparse@5`, `@fontsource/unbounded`, `@fontsource/exo-2`, `@fontsource/jetbrains-mono`.
+`react@19`, `react-dom@19`, `maplibre-gl@~5.24` (не 6: несовместим с deck.gl 9.4, см. add-strategic-map → Decision log), `react-map-gl@8` (импорт из `react-map-gl/maplibre`), `@deck.gl/core|layers|geo-layers|mesh-layers|mapbox|extensions@9.4`, `@luma.gl/engine@9.4`, `h3-js@4`, `zustand@5`, `motion@14`, `lucide-react`, `papaparse@5`, `@fontsource/unbounded`, `@fontsource/exo-2`, `@fontsource/jetbrains-mono`.
 Dev-зависимости: `vite@8`, `@vitejs/plugin-react`, `typescript` (из шаблона create-vite), `vitest@5`, `eslint` (конфиг из шаблона), `@types/geojson`, `@types/papaparse`, `mapshaper`.
 
 Шрифты подключаются в `main.tsx` только с подмножествами `cyrillic` и `latin`, например `@fontsource/exo-2/cyrillic-400.css`.

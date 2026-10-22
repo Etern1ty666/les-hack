@@ -117,7 +117,7 @@ openspec validate --all --strict
 
 Vite + React 19 + TypeScript, MapLibre GL (globe) + deck.gl 9.4 + H3, zustand, motion, vitest. Деплой — GitHub Pages. Бэкенда нет, ключей и секретов нет.
 
-Фактические версии (волна 0, октябрь 2026): node 24 (CI — 22), vite 8.3, react 19.3, typescript 6.0 (из шаблона create-vite), maplibre-gl 6.15, react-map-gl 8.1, deck.gl 9.4.0, luma.gl 9.4.2, h3-js 4.5, zustand 5.0, motion 14.6, vitest 5.0, oxlint 1.88.
+Фактические версии (волна 0, октябрь 2026): node 24 (CI — 22), vite 8.3, react 19.3, typescript 6.0 (из шаблона create-vite), maplibre-gl 5.24 (6.x несовместим с deck.gl 9.4 — см. спайк в `openspec/changes/add-strategic-map/design.md`), react-map-gl 8.1, deck.gl 9.4.0, luma.gl 9.4.2, h3-js 4.5, zustand 5.0, motion 14.6, vitest 5.0, oxlint 1.88.
 
 Структура `src/`: `domain` (контракты, справочники, форматирование), `state` (стор, селекторы, загрузка), `engine` (движок; сейчас заглушка), `data` (загрузка данных; сейчас фикстура), `fixtures`, `shell` (оболочка), `ui` (примитивы), `styles` (токены), `map` / `hud` / `workspace` (плейсхолдеры потоков волн 1–2).
 

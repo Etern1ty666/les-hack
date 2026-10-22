@@ -1,0 +1,47 @@
+/* Карта: звёзды под прозрачным канвасом MapLibre, атрибуция в стиле HUD. */
+.map-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--space);
+}
+.map-scene .maplibregl-map {
+  background: transparent;
+}
+
+.starfield {
+  position: absolute;
+  inset: 0;
+  transition: opacity 300ms linear;
+}
+.starfield__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.starfield__nebula {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 40% 30% at 70% 30%, rgba(54, 241, 194, 0.06), transparent 70%),
+    radial-gradient(ellipse 35% 25% at 20% 75%, rgba(139, 156, 255, 0.05), transparent 70%);
+}
+
+/* Атрибуция MapLibre: тёмная и компактная (полноценная панель источников — задача 3.5) */
+.map-scene .maplibregl-ctrl-bottom-right {
+  bottom: 30px;
+}
+.map-scene .maplibregl-ctrl-attrib {
+  background: var(--panel) !important;
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  border: 1px solid var(--panel-border);
+}
+.map-scene .maplibregl-ctrl-attrib a {
+  color: var(--text-1);
+}
+.map-scene .maplibregl-ctrl-attrib-button {
+  filter: invert(0.8);
+}

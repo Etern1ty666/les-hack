@@ -23,15 +23,32 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            game/package-lock.json
+
+      # Игра «ПОДРОСТ» (game/) — главная страница
+      - run: npm ci --prefix game
+      - run: npm run typecheck --prefix game
+      - run: npm run build --prefix game
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+
+      # Первая версия (волна 0 + глобус) — по адресу /v0/
       - run: npm ci
       - run: npm run typecheck
       - run: npm test -- --run
       - run: npm run build
         env:
-          BASE_PATH: /${{ github.event.repository.name }}/
+          BASE_PATH: /${{ github.event.repository.name }}/v0/
+
+      - run: |
+          mkdir -p site
+          cp -r game/dist/. site/
+          cp -r dist site/v0
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: site
 
   deploy:
     needs: build

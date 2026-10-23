@@ -4,8 +4,8 @@ import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { clock, useGame, world, type SiteStatus } from '../game/store'
-import type { V2 } from '../lib/math'
 import type { Site } from './generate'
+import { plantProgress, plantSpotsFor } from './planting'
 
 const STATUS_COLOR: Record<SiteStatus, string> = {
   fresh: '#efe8d2',
@@ -21,7 +21,8 @@ const STATUS_COLOR: Record<SiteStatus, string> = {
 const stumpGeom = new THREE.CylinderGeometry(0.2, 0.24, 0.3, 6).translate(0, 0.15, 0)
 const saplingGeom = new THREE.ConeGeometry(0.3, 0.8, 5).translate(0, 0.4, 0)
 const birchSaplingGeom = new THREE.IcosahedronGeometry(0.3, 0).scale(1, 1.3, 1).translate(0, 0.45, 0)
-const plantGeom = new THREE.ConeGeometry(0.22, 0.6, 5).translate(0, 0.3, 0)
+const plantGeom = new THREE.ConeGeometry(0.24, 0.7, 5).translate(0, 0.35, 0)
+const furrowGeom = new THREE.BoxGeometry(0.9, 0.07, 0.34)
 
 function makeInstanced(geom: THREE.BufferGeometry, color: string, count: number) {
   const m = new THREE.InstancedMesh(geom, new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.95 }), Math.max(1, count))
@@ -71,24 +72,22 @@ function StaticSiteProps({ sites }: { sites: Site[] }) {
   )
 }
 
-/** Места посадки: для комбинированного — только «окна» вдали от подроста. */
-function plantSpotsFor(site: Site, combined: boolean): V2[] {
-  if (!combined) return site.plantSpots
-  const good = site.saplings.filter((p) => p.good)
-  return site.plantSpots.filter(([x, z]) => good.every((p) => Math.hypot(p.x - x, p.z - z) > 1.3))
-}
-
-/** Посаженные культуры: появляются рядами во время посадки, затем подрастают. */
+/** Посаженные культуры: борозды и яркие сеянцы появляются ряд за рядом, затем подрастают. */
 function Plantings({ sites }: { sites: Site[] }) {
   const capacity = useMemo(() => sites.reduce((n, s) => n + s.plantSpots.length, 0) + 10, [sites])
-  const mesh = useMemo(() => makeInstanced(plantGeom, '#5c9a45', capacity), [capacity])
+  const mesh = useMemo(() => makeInstanced(plantGeom, '#7cc95a', capacity), [capacity])
+  const furrows = useMemo(() => {
+    const m = makeInstanced(furrowGeom, '#5a3f2a', capacity)
+    m.castShadow = false
+    return m
+  }, [capacity])
   const statuses = useGame((s) => s.sites)
   const acc = useRef(0)
   const o = useMemo(() => new THREE.Object3D(), [])
 
   useFrame((_, dt) => {
     acc.current += dt
-    if (acc.current < 0.15) return
+    if (acc.current < 0.1) return
     acc.current = 0
     const now = clock.minutes
     let n = 0
@@ -96,28 +95,43 @@ function Plantings({ sites }: { sites: Site[] }) {
       const st = statuses[site.id]
       if (!st || (st.status !== 'planting' && st.status !== 'restored') || st.chosen === 'natural' || !st.chosen) continue
       const spots = plantSpotsFor(site, st.chosen === 'combined')
-      let shown = spots.length
-      let grow = 0.55
-      if (st.status === 'planting' && st.plantStart !== undefined && st.plantEnd !== undefined) {
-        shown = Math.floor(spots.length * Math.min(1, Math.max(0, (now - st.plantStart) / (st.plantEnd - st.plantStart))))
-      } else if (st.restoredAt !== undefined) {
-        grow = 0.55 + 0.75 * Math.min(1, (now - st.restoredAt) / (36 * 60))
-      }
+      const planting = st.status === 'planting'
+      const shown = planting ? Math.floor(spots.length * plantProgress(now, st.plantStart, st.plantEnd)) : spots.length
+      const grow = planting || st.restoredAt === undefined ? 0.6 : 0.6 + 0.8 * Math.min(1, (now - st.restoredAt) / (36 * 60))
       for (let i = 0; i < shown && n < capacity; i++, n++) {
         const [x, z] = spots[i]!
-        o.position.set(x, world.heightAt(x, z) - 0.03, z)
-        o.scale.setScalar(grow * (0.85 + ((i * 37) % 10) / 30))
+        const y = world.heightAt(x, z)
+        // борозда под сеянцем — вместе образуют ряды
+        o.position.set(x, y + 0.02, z)
+        o.rotation.set(0, -site.angle, 0)
+        o.scale.setScalar(1)
+        o.updateMatrix()
+        furrows.setMatrixAt(n, o.matrix)
+        o.position.set(x, y - 0.03, z)
         o.rotation.set(0, i, 0)
+        // свежепосаженный сеянец «выскакивает»
+        const pop = planting && i > shown - 6 ? 0.5 + 0.1 * (shown - i) : 1
+        o.scale.setScalar(grow * pop * (0.85 + ((i * 37) % 10) / 30))
         o.updateMatrix()
         mesh.setMatrixAt(n, o.matrix)
       }
     }
     mesh.count = n
+    furrows.count = n
     mesh.instanceMatrix.needsUpdate = true
-    if (n > 0) mesh.computeBoundingSphere()
+    furrows.instanceMatrix.needsUpdate = true
+    if (n > 0) {
+      mesh.computeBoundingSphere()
+      furrows.computeBoundingSphere()
+    }
   })
 
-  return <primitive object={mesh} />
+  return (
+    <>
+      <primitive object={furrows} />
+      <primitive object={mesh} />
+    </>
+  )
 }
 
 function SiteOutline({ site }: { site: Site }) {

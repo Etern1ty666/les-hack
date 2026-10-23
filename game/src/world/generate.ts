@@ -139,8 +139,9 @@ export function generateWorld(seed = 7): World {
     }
     const dr = distToPolyline(x, z, river)
     if (dr < 3.4) h = lerp(h, -1.4, smoothstep(1 - dr / 3.4))
-    const dl = Math.hypot(x - lake[0], z - lake[1])
-    if (dl < 9) h = lerp(h, -1.3, smoothstep(clamp((9 - dl) / 4, 0, 1)))
+    // озеро с неровным берегом
+    const dl = Math.hypot(x - lake[0], z - lake[1]) * (1 + 0.3 * n3(x * 0.12 + 7, z * 0.12))
+    if (dl < 9) h = lerp(h, -1.3, smoothstep(clamp((9 - dl) / 2.5, 0, 1)))
     const dv = Math.hypot(x - base[0], z - base[1])
     if (dv < 15) h = lerp(h, 0.7, smoothstep(clamp((15 - dv) / 5, 0, 1)))
     return h

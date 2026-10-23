@@ -22,7 +22,8 @@ export function Scene() {
       shadows
       dpr={[1, 2]}
       camera={{ fov: 30, position: [-8, 88, 98], near: 1, far: 900 }}
-      gl={{ antialias: false, powerPreference: 'high-performance' }}
+      // preserveDrawingBuffer в dev — чтобы снимки кадра для проверки визуала были стабильными
+      gl={{ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: import.meta.env.DEV }}
       onPointerMissed={() => useGame.getState().selectSite(null)}
     >
       <color attach="background" args={['#a7b09a']} />

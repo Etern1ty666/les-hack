@@ -6,6 +6,18 @@ import { loadPixels, lonLatToTile, pool, tilesFor, type Bbox } from './tiles'
 
 export type Progress = (step: string, done: number, total: number) => void
 
+export const DEM_TILES = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'
+export const demUrl = (z: number, x: number, y: number) => DEM_TILES.replace('{z}', String(z)).replace('{x}', String(x)).replace('{y}', String(y))
+export const coverUrl = (z: number, x: number, y: number) => `https://tiles.globalforestwatch.org/umd_tree_cover_density_2000/v1.8/tcd_30/${z}/${x}/${y}.png`
+export const lossUrl = (z: number, x: number, y: number) => `https://storage.googleapis.com/earthenginepartners-hansen/tiles/gfc_v1.12/loss_year/${z}/${x}/${y}.png`
+
+/** Год рубки по пикселю тайла Hansen loss_year: 0 — нет потери (серый 64,64,64 — вода/нет данных). */
+export function lossYearOf(px: Uint8ClampedArray, i: number): number {
+  const r = px[i * 4]!
+  if (r === 0 || px[i * 4 + 2]! > 0) return 0
+  return 2000 + Math.round((24 * px[i * 4 + 1]!) / r)
+}
+
 // ---------- Рельеф ----------
 export const DEM_Z = 12
 
@@ -21,7 +33,7 @@ export async function loadDem(b: Bbox, progress: Progress): Promise<Dem> {
     tiles,
     6,
     async ([x, y]) => {
-      const px = await loadPixels(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${DEM_Z}/${x}/${y}.png`)
+      const px = await loadPixels(demUrl(DEM_Z, x, y))
       const h = new Float32Array(256 * 256)
       if (px) for (let i = 0; i < h.length; i++) h[i] = px[i * 4]! * 256 + px[i * 4 + 1]! + px[i * 4 + 2]! / 256 - 32768
       data.set(`${x}/${y}`, h)
@@ -64,7 +76,7 @@ export async function loadTreeCover(b: Bbox, progress: Progress): Promise<TreeCo
     tiles,
     6,
     async ([x, y]) => {
-      const px = await loadPixels(`https://tiles.globalforestwatch.org/umd_tree_cover_density_2000/v1.8/tcd_30/${z}/${x}/${y}.png`)
+      const px = await loadPixels(coverUrl(z, x, y))
       const m = new Uint8Array(256 * 256)
       if (px) for (let i = 0; i < m.length; i++) m[i] = px[i * 4 + 3]! > 0 ? 1 : 0
       data.set(`${x}/${y}`, m)
@@ -101,17 +113,16 @@ export async function loadLoss(b: Bbox, progress: Progress): Promise<LossPixel[]
     tiles,
     6,
     async ([x, y]) => {
-      const px = await loadPixels(`https://storage.googleapis.com/earthenginepartners-hansen/tiles/gfc_v1.12/loss_year/${GFC_Z}/${x}/${y}.png`)
+      const px = await loadPixels(lossUrl(GFC_Z, x, y))
       if (!px) return
       for (let i = 0; i < 256 * 256; i++) {
-        const r = px[i * 4]!
-        // серый (64,64,64) — вода/нет данных; настоящие пиксели потери — красно-жёлтые с синим = 0
-        if (r === 0 || px[i * 4 + 2]! > 0) continue
+        // красный — интенсивность, зелёный/красный × 24 — год после 2000
+        const year = lossYearOf(px, i)
+        if (!year) continue
         const gx = x * 256 + (i % 256)
         const gy = y * 256 + Math.floor(i / 256)
         if (gx < bx0 * 256 || gx > bx1 * 256 || gy < by0 * 256 || gy > by1 * 256) continue
-        // красный — интенсивность, зелёный/красный × 24 — год после 2000
-        out.push({ gx, gy, year: 2000 + Math.round((24 * px[i * 4 + 1]!) / r) })
+        out.push({ gx, gy, year })
       }
     },
     (n) => progress('Вырубки со спутника', n, tiles.length),
@@ -131,14 +142,14 @@ export interface VecFeature {
 
 let tileTemplate: string | null = null
 
-async function template(): Promise<string> {
+export async function template(): Promise<string> {
   if (tileTemplate) return tileTemplate
   const tj = await (await fetch('https://tiles.openfreemap.org/planet')).json()
   tileTemplate = tj.tiles[0] as string
   return tileTemplate
 }
 
-async function tileBytes(url: string): Promise<Uint8Array | null> {
+export async function tileBytes(url: string): Promise<Uint8Array | null> {
   const res = await fetch(url)
   if (!res.ok) return null
   let buf = new Uint8Array(await res.arrayBuffer())

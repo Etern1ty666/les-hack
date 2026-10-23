@@ -35,7 +35,11 @@ export function tilesFor(b: Bbox, z: number): [number, number][] {
 export async function loadPixels(url: string): Promise<Uint8ClampedArray | null> {
   const res = await fetch(url)
   if (!res.ok) return null
-  const bmp = await createImageBitmap(await res.blob())
+  return decodePixels(await res.blob())
+}
+
+export async function decodePixels(blob: Blob): Promise<Uint8ClampedArray> {
+  const bmp = await createImageBitmap(blob)
   const c = new OffscreenCanvas(bmp.width, bmp.height)
   const ctx = c.getContext('2d', { willReadFrequently: true })!
   ctx.drawImage(bmp, 0, 0)

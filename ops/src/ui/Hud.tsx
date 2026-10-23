@@ -1,8 +1,7 @@
 // Интерфейс оператора: верхняя полоса, оперативная лента, досье лесосеки с решением ИИ, бригады, загрузка.
-import { AlertTriangle, Bot, Check, ClipboardList, Globe2, Satellite, Send, Sprout, TreePine, Truck } from 'lucide-react'
+import { AlertTriangle, Bot, Check, ClipboardList, Globe2, MapIcon, Satellite, Send, Sprout, TreePine, Truck } from 'lucide-react'
 import { HEIGHT_RU, KIND_COLOR, KIND_ORDER, KIND_RU, SPECIES_RU } from '../ops/engine'
 import { fmtCoord, fmtDay, fmtTime, siteOf, useOps, type EventKind, type SiteStatus } from '../ops/store'
-import { Overview } from './Overview'
 import { Portrait } from './Portrait'
 
 const STATUS: Record<SiteStatus, { label: string; color: string }> = {
@@ -40,13 +39,20 @@ function Top() {
   const setSpeed = useOps((s) => s.setSpeed)
   const auto = useOps((s) => s.autoAssign)
   const setAuto = useOps((s) => s.setAutoAssign)
-  const setOverview = useOps((s) => s.setOverview)
+  const mode = useOps((s) => s.mode)
+  const setMode = useOps((s) => s.setMode)
   return (
     <div className="top">
       <span className="brand">
         <TreePine size={20} color="#3fc79a" /> ПОДРОСТ <small>ОПЕРАТИВНЫЙ ЦЕНТР</small>
       </span>
-      {area && (
+      {mode === 'map' && (
+        <span className="top__area">
+          <b>Карта лесов России</b>
+          <span>OpenStreetMap · рельеф · лесистость и рубки Hansen GFC</span>
+        </span>
+      )}
+      {mode === 'area' && area && (
         <span className="top__area">
           <b>
             {label.region || 'Район'}
@@ -58,21 +64,30 @@ function Top() {
         </span>
       )}
       <span className="top__spacer" />
-      <label className="toggle">
-        <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> Автоназначение бригад
-      </label>
-      <span className="seg" title="Ускорение модельного времени для демонстрации">
-        {SPEEDS.map(([v, l]) => (
-          <button key={v} type="button" aria-pressed={speed === v} onClick={() => setSpeed(v)}>
-            {l}
-          </button>
-        ))}
+      {mode === 'area' && (
+        <>
+          <label className="toggle">
+            <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> Автоназначение бригад
+          </label>
+          <span className="seg" title="Ускорение модельного времени для демонстрации">
+            {SPEEDS.map(([v, l]) => (
+              <button key={v} type="button" aria-pressed={speed === v} onClick={() => setSpeed(v)}>
+                {l}
+              </button>
+            ))}
+          </span>
+          <span className="top__clock">{fmtTime(now)}</span>
+          <span className="top__date">{fmtDay(now)}</span>
+        </>
+      )}
+      <span className="seg seg--mode">
+        <button type="button" aria-pressed={mode === 'map'} onClick={() => setMode('map')}>
+          <MapIcon size={15} /> Карта
+        </button>
+        <button type="button" aria-pressed={mode === 'area'} disabled={!area} title={area ? undefined : 'Выберите район на карте'} onClick={() => setMode('area')}>
+          <TreePine size={15} /> Район
+        </button>
       </span>
-      <span className="top__clock">{fmtTime(now)}</span>
-      <span className="top__date">{fmtDay(now)}</span>
-      <button type="button" className="btn-top" onClick={() => setOverview(true)}>
-        <Globe2 size={15} /> Сменить район
-      </button>
     </div>
   )
 }
@@ -376,19 +391,19 @@ function Loading() {
 
 export function Hud() {
   const status = useOps((s) => s.status)
+  const mode = useOps((s) => s.mode)
 
   return (
     <>
       <Top />
-      {status === 'ready' && (
+      {mode === 'area' && status === 'ready' && (
         <>
           <Feed />
           <Side />
           <Crew />
         </>
       )}
-      <Loading />
-      <Overview />
+      {mode === 'area' && <Loading />}
     </>
   )
 }

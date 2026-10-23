@@ -1,16 +1,18 @@
 import { useEffect } from 'react'
+import { regionAt } from './data/regions'
+import { RealMap } from './map/RealMap'
 import { advanceSim, sim, useOps } from './ops/store'
 import { Hud } from './ui/Hud'
-import { PRESETS, regionAt } from './ui/Overview'
 import { Scene } from './world/Scene'
 
 export function App() {
+  const mode = useOps((s) => s.mode)
   useEffect(() => {
-    // стартовый район — Варнавино (пилотная Нижегородская область); ?lon=&lat= — любая точка
+    // старт — реальная карта (Ставрополь); ?lon=&lat= — сразу диорама района в этой точке
     const q = new URLSearchParams(location.search)
-    const lon = Number(q.get('lon') ?? PRESETS[0]!.lon)
-    const lat = Number(q.get('lat') ?? PRESETS[0]!.lat)
-    if (useOps.getState().status === 'idle') {
+    if (q.has('lon') && q.has('lat') && useOps.getState().status === 'idle') {
+      const lon = Number(q.get('lon'))
+      const lat = Number(q.get('lat'))
       void regionAt(lon, lat)
         .catch(() => '')
         .then((r) => useOps.getState().loadArea({ lon, lat, widthKm: 12, heightKm: 8 }, r))
@@ -25,7 +27,10 @@ export function App() {
   }, [])
   return (
     <div className="app">
-      <Scene />
+      <div className={`stage${mode === 'map' ? ' stage--hidden' : ''}`}>
+        <Scene />
+      </div>
+      <RealMap />
       <Hud />
     </div>
   )

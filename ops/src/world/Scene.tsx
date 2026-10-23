@@ -18,9 +18,12 @@ function SimClock() {
 export function Scene() {
   const area = useOps((s) => s.area)
   const version = useOps((s) => s.version)
+  // пока открыта карта, диорама не рисуется
+  const hidden = useOps((s) => s.mode === 'map')
   const r = area ? Math.max(area.W, area.D) / 2 + 12 : 120
   return (
     <Canvas
+      frameloop={hidden ? 'never' : 'always'}
       shadows
       dpr={[1, 2]}
       camera={{ fov: 30, position: [0, 132, 150], near: 1, far: 1500 }}

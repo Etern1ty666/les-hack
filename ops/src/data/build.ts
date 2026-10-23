@@ -8,6 +8,7 @@ import { tileToLonLat, type Bbox } from './tiles'
 export const UNIT_M = 60 // 1 ед. сцены = 60 м
 export const EXAG = 3 // вертикальное преувеличение рельефа
 export const RECENT_FROM = 2019 // свежие рубки (последние ~6 лет) — под решение о лесовосстановлении
+const MIN_SITES = 6
 
 export interface AreaSpec {
   lon: number
@@ -84,7 +85,8 @@ export interface Area {
   sites: Site[]
   trees: Tree[]
   route(to: V2): V2[]
-  stats: { forestShare: number; recentLossHa: number; oldLossHa: number; elevMin: number; elevMax: number }
+  /** sitesFrom — с какого года рубки взяты на контроль (обычно RECENT_FROM, на юге окно шире). */
+  stats: { forestShare: number; recentLossHa: number; oldLossHa: number; elevMin: number; elevMax: number; sitesFrom: number }
 }
 
 // классы растра
@@ -269,103 +271,114 @@ export async function buildArea(spec: AreaSpec, progress: Progress): Promise<Are
     else oldLossHa += pxHa
   }
 
-  // кластеры свежих рубок (8-связность) → лесосеки
-  const seen = new Set<string>()
-  const clusters: { pts: V2[]; years: number[] }[] = []
-  for (const [key, v] of lossPos) {
-    if (v.year < RECENT_FROM || seen.has(key)) continue
-    const stack = [key]
-    seen.add(key)
-    const pts: V2[] = []
-    const years: number[] = []
-    while (stack.length) {
-      const k = stack.pop()!
-      const cur = lossPos.get(k)!
-      pts.push(cur.pos)
-      years.push(cur.year)
-      const [gx, gy] = k.split(',').map(Number) as [number, number]
-      for (let dx = -1; dx <= 1; dx++)
-        for (let dy = -1; dy <= 1; dy++) {
-          const nk = `${gx + dx},${gy + dy}`
-          const nv = lossPos.get(nk)
-          if (nv && nv.year >= RECENT_FROM && !seen.has(nk)) {
-            seen.add(nk)
-            stack.push(nk)
+  // кластеры рубок с года from (8-связность) → лесосеки
+  const collectSites = (from: number, minHa: number): Site[] => {
+    const seen = new Set<string>()
+    const clusters: { pts: V2[]; years: number[] }[] = []
+    for (const [key, v] of lossPos) {
+      if (v.year < from || seen.has(key)) continue
+      const stack = [key]
+      seen.add(key)
+      const pts: V2[] = []
+      const years: number[] = []
+      while (stack.length) {
+        const k = stack.pop()!
+        const cur = lossPos.get(k)!
+        pts.push(cur.pos)
+        years.push(cur.year)
+        const [gx, gy] = k.split(',').map(Number) as [number, number]
+        for (let dx = -1; dx <= 1; dx++)
+          for (let dy = -1; dy <= 1; dy++) {
+            const nk = `${gx + dx},${gy + dy}`
+            const nv = lossPos.get(nk)
+            if (nv && nv.year >= from && !seen.has(nk)) {
+              seen.add(nk)
+              stack.push(nk)
+            }
           }
-        }
+      }
+      clusters.push({ pts, years })
     }
-    clusters.push({ pts, years })
-  }
-  // крупные массивы рубок (в Сибири — сотни га) режем сеткой ≈ 700 м на отдельные лесосеки
-  const maxPx = Math.round(45 / pxHa)
-  const groups: { pts: V2[]; years: number[] }[] = []
-  for (const c of clusters) {
-    if (c.pts.length <= maxPx) {
-      groups.push(c)
-      continue
+    // крупные массивы рубок (в Сибири — сотни га) режем сеткой ≈ 700 м на отдельные лесосеки
+    const maxPx = Math.round(45 / pxHa)
+    const groups: { pts: V2[]; years: number[] }[] = []
+    for (const c of clusters) {
+      if (c.pts.length <= maxPx) {
+        groups.push(c)
+        continue
+      }
+      const cells = new Map<string, { pts: V2[]; years: number[] }>()
+      c.pts.forEach((p, i) => {
+        const k = `${Math.floor(p[0] / 12)},${Math.floor(p[1] / 12)}`
+        const g = cells.get(k) ?? { pts: [], years: [] }
+        g.pts.push(p)
+        g.years.push(c.years[i]!)
+        cells.set(k, g)
+      })
+      groups.push(...cells.values())
     }
-    const cells = new Map<string, { pts: V2[]; years: number[] }>()
-    c.pts.forEach((p, i) => {
-      const k = `${Math.floor(p[0] / 12)},${Math.floor(p[1] / 12)}`
-      const g = cells.get(k) ?? { pts: [], years: [] }
-      g.pts.push(p)
-      g.years.push(c.years[i]!)
-      cells.set(k, g)
-    })
-    groups.push(...cells.values())
-  }
-  groups.sort((a, b) => b.pts.length - a.pts.length)
-  clusters.length = 0
-  clusters.push(...groups)
+    groups.sort((a, b) => b.pts.length - a.pts.length)
+    clusters.length = 0
+    clusters.push(...groups)
 
-  const sites: Site[] = []
-  const halfPx = pxM / UNIT_M / 2
-  for (const c of clusters) {
-    const areaHa = Math.round(c.pts.length * pxHa * 10) / 10
-    if (areaHa < 1.5 || sites.length >= 32) break
-    const inForest = c.pts.filter(([x, z]) => cls[idx(x, z)] === FOREST || cls[idx(x + 1, z)] === FOREST || cls[idx(x - 1, z)] === FOREST).length
-    if (inForest < c.pts.length * 0.5) continue
-    const expanded = c.pts.flatMap(([x, z]) => [[x - halfPx, z - halfPx], [x + halfPx, z - halfPx], [x + halfPx, z + halfPx], [x - halfPx, z + halfPx]] as V2[])
-    const poly = convexHull(expanded)
-    const cx = c.pts.reduce((s, p) => s + p[0], 0) / c.pts.length
-    const cz = c.pts.reduce((s, p) => s + p[1], 0) / c.pts.length
-    if (Math.abs(cx) > W / 2 - 3 || Math.abs(cz) > D / 2 - 3) continue
-    // ориентация — главная ось облака пикселей
-    let sxx = 0, szz = 0, sxz = 0
-    for (const [x, z] of c.pts) {
-      sxx += (x - cx) ** 2; szz += (z - cz) ** 2; sxz += (x - cx) * (z - cz)
+    const sites: Site[] = []
+    const halfPx = pxM / UNIT_M / 2
+    for (const c of clusters) {
+      const areaHa = Math.round(c.pts.length * pxHa * 10) / 10
+      if (areaHa < minHa || sites.length >= 32) break
+      const inForest = c.pts.filter(([x, z]) => cls[idx(x, z)] === FOREST || cls[idx(x + 1, z)] === FOREST || cls[idx(x - 1, z)] === FOREST).length
+      if (inForest < c.pts.length * 0.5) continue
+      const expanded = c.pts.flatMap(([x, z]) => [[x - halfPx, z - halfPx], [x + halfPx, z - halfPx], [x + halfPx, z + halfPx], [x - halfPx, z + halfPx]] as V2[])
+      const poly = convexHull(expanded)
+      const cx = c.pts.reduce((s, p) => s + p[0], 0) / c.pts.length
+      const cz = c.pts.reduce((s, p) => s + p[1], 0) / c.pts.length
+      if (Math.abs(cx) > W / 2 - 3 || Math.abs(cz) > D / 2 - 3) continue
+      // ориентация — главная ось облака пикселей
+      let sxx = 0, szz = 0, sxz = 0
+      for (const [x, z] of c.pts) {
+        sxx += (x - cx) ** 2; szz += (z - cz) ** 2; sxz += (x - cx) * (z - cz)
+      }
+      const angle = 0.5 * Math.atan2(2 * sxz, sxx - szz)
+      const ca = Math.cos(angle), sa = Math.sin(angle)
+      let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity
+      for (const [x, z] of poly) {
+        const u = (x - cx) * ca + (z - cz) * sa
+        const v = -(x - cx) * sa + (z - cz) * ca
+        u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v)
+      }
+      const year = c.years.sort((a, b) => a - b)[Math.floor(c.years.length / 2)]!
+      const index = sites.length + 1
+      const survey = generateSurvey(mulberry32(index * 7717 + Math.round(cx * 31)), false, (year - 2022) * 0.08)
+      const site: Site = {
+        id: `S${index}`,
+        index,
+        name: `Лесосека ${index}`,
+        year,
+        center: [cx, cz],
+        lonlat: toLonLat(cx, cz),
+        poly,
+        angle,
+        w: u1 - u0,
+        h: v1 - v0,
+        areaHa,
+        survey,
+        decision: decide(survey, areaHa),
+        stumps: [],
+        saplings: [],
+        plantSpots: [],
+      }
+      decorateSite(site, [cx + ((u0 + u1) / 2) * ca - ((v0 + v1) / 2) * sa, cz + ((u0 + u1) / 2) * sa + ((v0 + v1) / 2) * ca], rng)
+      sites.push(site)
     }
-    const angle = 0.5 * Math.atan2(2 * sxz, sxx - szz)
-    const ca = Math.cos(angle), sa = Math.sin(angle)
-    let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity
-    for (const [x, z] of poly) {
-      const u = (x - cx) * ca + (z - cz) * sa
-      const v = -(x - cx) * sa + (z - cz) * ca
-      u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v)
-    }
-    const year = c.years.sort((a, b) => a - b)[Math.floor(c.years.length / 2)]!
-    const index = sites.length + 1
-    const survey = generateSurvey(mulberry32(index * 7717 + Math.round(cx * 31)), false, (year - 2022) * 0.08)
-    const site: Site = {
-      id: `S${index}`,
-      index,
-      name: `Лесосека ${index}`,
-      year,
-      center: [cx, cz],
-      lonlat: toLonLat(cx, cz),
-      poly,
-      angle,
-      w: u1 - u0,
-      h: v1 - v0,
-      areaHa,
-      survey,
-      decision: decide(survey, areaHa),
-      stumps: [],
-      saplings: [],
-      plantSpots: [],
-    }
-    decorateSite(site, [cx + ((u0 + u1) / 2) * ca - ((v0 + v1) / 2) * sa, cz + ((u0 + u1) / 2) * sa + ((v0 + v1) / 2) * ca], rng)
-    sites.push(site)
+    return sites
+  }
+  // в лесостепи и на Кавказе (Ставрополье) свежих рубок мало — расширяем окно лет, чтобы под контролем были лесосеки
+  let sitesFrom = RECENT_FROM
+  let sites = collectSites(RECENT_FROM, 1.5)
+  for (const [from, minHa] of [[2015, 0.6], [2010, 0.3]] as const) {
+    if (sites.length >= MIN_SITES) break
+    sitesFrom = from
+    sites = collectSites(from, minHa)
   }
 
   // --- дороги, реки-линии, постройки, населённые пункты ---
@@ -489,7 +502,12 @@ export async function buildArea(spec: AreaSpec, progress: Progress): Promise<Are
         if (!(c === OPEN || c === WET) || rng() > 0.05) continue // редкие деревья на лугах
       } else if (ly) young = true // старая рубка → молодняк
       const grove = n2(px * 0.05 - 40, pz * 0.05)
-      const kind: TreeKind = young ? (rng() < 0.6 ? 'birch' : 'pine') : grove > 0.35 ? (rng() < 0.75 ? 'birch' : 'spruce') : grove < -0.3 ? 'pine' : rng() < 0.8 ? 'spruce' : 'birch'
+      // юг (Ставрополье, Кавказ) — лиственные леса и сосновые посадки, без ели; севернее — тайга
+      const kind: TreeKind = young
+        ? rng() < 0.6 ? 'birch' : 'pine'
+        : spec.lat < 48
+          ? grove > 0.45 ? 'pine' : 'birch'
+          : grove > 0.35 ? (rng() < 0.75 ? 'birch' : 'spruce') : grove < -0.3 ? 'pine' : rng() < 0.8 ? 'spruce' : 'birch'
       const s = young ? rand(rng, 0.45, 0.75) : rand(rng, 0.8, 1.25)
       trees.push({ x: px, z: pz, y: heightAt(px, pz), kind, s, rot: rand(rng, 0, Math.PI * 2), tint: rand(rng, -1, 1) })
     }
@@ -578,7 +596,7 @@ export async function buildArea(spec: AreaSpec, progress: Progress): Promise<Are
     sites,
     trees,
     route,
-    stats: { forestShare: forestCells / cls.length, recentLossHa, oldLossHa, elevMin, elevMax },
+    stats: { forestShare: forestCells / cls.length, recentLossHa, oldLossHa, elevMin, elevMax, sitesFrom },
   }
 }
 

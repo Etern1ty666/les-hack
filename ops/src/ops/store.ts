@@ -86,7 +86,8 @@ interface OpsState {
   missions: Mission[]
   selectedSiteId: string | null
   focus: Focus | null
-  overviewOpen: boolean
+  /** Карта — реальная карта России; район — оперативная диорама. */
+  mode: 'map' | 'area'
 
   loadArea(spec: AreaSpec, region?: string): Promise<void>
   step(): void
@@ -96,7 +97,7 @@ interface OpsState {
   approve(siteId: string, kind: Kind): void
   select(siteId: string | null): void
   focusOn(x: number, z: number, zoom?: number): void
-  setOverview(open: boolean): void
+  setMode(mode: 'map' | 'area'): void
 }
 
 const CREW: [string, boolean][] = [
@@ -113,6 +114,11 @@ const uid = (p: string) => `${p}${++uidN}`
 
 export const fmtTime = (minutes: number) => simDate(minutes).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
 export const fmtDay = (minutes: number) => simDate(minutes).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+export const plural = (n: number, one: string, few: string, many: string) => {
+  const m10 = n % 10
+  const m100 = n % 100
+  return m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? few : many
+}
 export const fmtCoord = ([lon, lat]: [number, number]) => `${lat.toFixed(4).replace('.', ',')}° с. ш. ${lon.toFixed(4).replace('.', ',')}° в. д.`
 
 export const siteOf = (id: string): Site | undefined => useOps.getState().area?.sites.find((s) => s.id === id)
@@ -176,10 +182,11 @@ export const useOps = create<OpsState>()((set, get) => {
     missions: [],
     selectedSiteId: null,
     focus: null,
-    overviewOpen: false,
+    // ссылка ?lon=&lat= открывает сразу диораму — карту тогда не грузим, пока её не откроют
+    mode: new URLSearchParams(location.search).has('lon') ? 'area' : 'map',
 
     async loadArea(spec, region) {
-      set({ status: 'loading', progress: {}, error: null, overviewOpen: false })
+      set({ status: 'loading', progress: {}, error: null, mode: 'area' })
       try {
         const area = await buildArea(spec, (step, done, total) => set((s) => ({ progress: { ...s.progress, [step]: { done, total } } })))
         const placeName = area.base.place
@@ -199,10 +206,14 @@ export const useOps = create<OpsState>()((set, get) => {
           now: 0,
         }))
         const recent = Math.round(area.stats.recentLossHa)
+        const from = area.stats.sitesFrom
         log({
           kind: 'satellite',
           title: 'Спутниковый мониторинг',
-          text: `Hansen GFC: в районе ${recent.toLocaleString('ru-RU')} га рубок за 2019–2024 гг. На контроль поставлено ${area.sites.length} лесосек — по ним нужны заключительные осмотры и решения о лесовосстановлении.`,
+          text:
+            `Hansen GFC: в районе ${recent.toLocaleString('ru-RU')} га рубок за 2019–2024 гг.` +
+            (from < 2019 ? ` Свежих рубок мало — на контроль взяты и рубки с ${from} г.` : '') +
+            ` На контроле ${area.sites.length} ${plural(area.sites.length, 'лесосека', 'лесосеки', 'лесосек')} — нужны заключительные осмотры и решения о лесовосстановлении.`,
         })
         log({ kind: 'system', title: 'Район загружен', text: `${area.base.name}. Лесистость (OSM + спутник) — ${Math.round(area.stats.forestShare * 100)} % территории. Бригад на линии: ${get().brigades.length}.` })
       } catch (e) {
@@ -320,8 +331,8 @@ export const useOps = create<OpsState>()((set, get) => {
     focusOn(x, z, zoom) {
       set((s) => ({ focus: { x, z, zoom, key: (s.focus?.key ?? 0) + 1 } }))
     },
-    setOverview(open) {
-      set({ overviewOpen: open })
+    setMode(mode) {
+      set({ mode })
     },
   }
 })
